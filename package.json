@@ -6,11 +6,11 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "fca-unofficial": "1.3.11",
-    "express": "4.19.2",
-    "ejs": "3.1.10"
+    "fca-unofficial": "github:Schmavery/facebook-chat-api",
+    "express": "^4.19.2",
+    "ejs": "^3.1.10"
   },
   "engines": {
-    "node": "18.19.0"
+    "node": "18.x"
   }
 }
