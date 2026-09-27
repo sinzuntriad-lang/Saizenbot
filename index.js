@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
-const login = require("@dongdev/fca-unofficial");
+const login = require("fca-unofficial");
 const config = require("./config");
 const loadCommands = require("./core/loader");
 const handleMessage = require("./core/handler");
@@ -30,7 +30,7 @@ app.set("views", path.join(__dirname, "public"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// ========== DASHBOARD PAGES ==========
+// ========== DASHBOARD HOME ==========
 app.get("/", (req, res) => {
   res.render("index", {
     stats: global.bot.stats,
@@ -39,11 +39,10 @@ app.get("/", (req, res) => {
   });
 });
 
-// ========== LOGIN SA DASHBOARD ==========
+// ========== LOGIN FORM HANDLER ==========
 app.post("/login", async (req, res) => {
   const { email, password, dashPass } = req.body;
   
-  // Check dashboard password
   if (dashPass !== config.dashboard.password) {
     return res.render("index", {
       error: "❌ Maling Dashboard Password",
@@ -70,8 +69,10 @@ app.post("/login", async (req, res) => {
 
   global.bot.isLoggingIn = true;
 
-  // Burahin lumang session
-  if (fs.existsSync(APPSTATE_PATH)) fs.unlinkSync(APPSTATE_PATH);
+  // Burahin lumang session kung mayroon
+  if (fs.existsSync(APPSTATE_PATH)) {
+    try { fs.unlinkSync(APPSTATE_PATH); } catch (e) {}
+  }
 
   console.log(`🔐 Nagla-login: ${email}`);
 
@@ -94,7 +95,7 @@ app.post("/login", async (req, res) => {
         });
       }
 
-      // Save session
+      // I-save ang session
       fs.writeFileSync(APPSTATE_PATH, JSON.stringify(api.getAppState(), null, 2));
       
       global.bot.api = api;
@@ -119,7 +120,7 @@ app.post("/login", async (req, res) => {
   );
 });
 
-// Toggle ON/OFF
+// ========== TOGGLE ON/OFF ==========
 app.post("/toggle", (req, res) => {
   if (req.body.dashPass !== config.dashboard.password) {
     return res.send("Wrong password");
@@ -128,7 +129,7 @@ app.post("/toggle", (req, res) => {
   res.redirect("/");
 });
 
-// Logout
+// ========== LOGOUT / CLEAR SESSION ==========
 app.post("/logout", (req, res) => {
   if (req.body.dashPass !== config.dashboard.password) {
     return res.send("Wrong password");
@@ -136,16 +137,23 @@ app.post("/logout", (req, res) => {
   global.bot.api = null;
   global.bot.stats.online = false;
   global.bot.active.set("halimaw", false);
-  if (fs.existsSync(APPSTATE_PATH)) fs.unlinkSync(APPSTATE_PATH);
+  if (fs.existsSync(APPSTATE_PATH)) {
+    try { fs.unlinkSync(APPSTATE_PATH); } catch (e) {}
+  }
   res.redirect("/");
 });
 
+// ========== START SERVER ==========
 app.listen(config.dashboard.port, () => {
-  console.log(`🌐 Dashboard: http://localhost:${config.dashboard.port}`);
+  console.log(`🌐 Dashboard Ready — Port: ${config.dashboard.port}`);
 });
 
-// Auto-restart
+// ========== AUTO-RESTART SA ERROR ==========
 process.on("uncaughtException", (err) => {
-  console.error("🔴 Error:", err.message);
+  console.error("🔴 Error — Magre-restart:", err.message);
   setTimeout(() => process.exit(1), 8000);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("🔴 Unhandled Rejection:", reason);
 });
