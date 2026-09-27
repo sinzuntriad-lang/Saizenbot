@@ -1,13 +1,13 @@
 {
   "name": "saizen-bot",
   "version": "3.0.0",
-  "description": "Login via Dashboard — No AppState Needed",
+  "description": "Saizen Bot — Dashboard Login",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "fca-unofficial": "^1.3.11",
+    "fca-unofficial": "latest",
     "express": "^4.19.2",
     "ejs": "^3.1.10"
   },
