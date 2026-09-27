@@ -24,13 +24,11 @@ global.bot = {
   }
 };
 
-// Dashboard Setup
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "public"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// ========== DASHBOARD HOME ==========
 app.get("/", (req, res) => {
   res.render("index", {
     stats: global.bot.stats,
@@ -39,121 +37,59 @@ app.get("/", (req, res) => {
   });
 });
 
-// ========== LOGIN FORM HANDLER ==========
 app.post("/login", async (req, res) => {
   const { email, password, dashPass } = req.body;
   
   if (dashPass !== config.dashboard.password) {
-    return res.render("index", {
-      error: "❌ Maling Dashboard Password",
-      stats: global.bot.stats,
-      active: global.bot.active.get("halimaw") || false
-    });
+    return res.render("index", { error: "❌ Maling Dashboard Password", stats: global.bot.stats, active: false });
   }
-
   if (!email || !password) {
-    return res.render("index", {
-      error: "❌ Ilagay ang Email at Password",
-      stats: global.bot.stats,
-      active: global.bot.active.get("halimaw") || false
-    });
+    return res.render("index", { error: "❌ Ilagay ang Email at Password", stats: global.bot.stats, active: false });
   }
-
   if (global.bot.isLoggingIn || global.bot.stats.online) {
-    return res.render("index", {
-      error: "⚠️ Naka-login na o nagla-login — maghintay ka",
-      stats: global.bot.stats,
-      active: global.bot.active.get("halimaw") || false
-    });
+    return res.render("index", { error: "⚠️ Naka-login na", stats: global.bot.stats, active: global.bot.active.get("halimaw") });
   }
 
   global.bot.isLoggingIn = true;
+  if (fs.existsSync(APPSTATE_PATH)) fs.unlinkSync(APPSTATE_PATH);
 
-  // Burahin lumang session kung mayroon
-  if (fs.existsSync(APPSTATE_PATH)) {
-    try { fs.unlinkSync(APPSTATE_PATH); } catch (e) {}
-  }
-
-  console.log(`🔐 Nagla-login: ${email}`);
-
-  login(
-    { email, password },
-    {
-      forceLogin: true,
-      listenEvents: true,
-      autoMarkDelivery: false,
-      autoMarkRead: false
-    },
-    async (err, api) => {
-      if (err) {
-        console.error("❌ Login failed:", err.message || err);
-        global.bot.isLoggingIn = false;
-        return res.render("index", {
-          error: "❌ Login Failed: " + (err.message || "Suriin ang Email/Password"),
-          stats: global.bot.stats,
-          active: global.bot.active.get("halimaw") || false
-        });
-      }
-
-      // I-save ang session
-      fs.writeFileSync(APPSTATE_PATH, JSON.stringify(api.getAppState(), null, 2));
-      
-      global.bot.api = api;
-      global.bot.stats.online = true;
-      global.bot.stats.startedAt = new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" });
+  login({ email, password }, {
+    forceLogin: true,
+    listenEvents: true,
+    autoMarkDelivery: false,
+    autoMarkRead: false
+  }, async (err, api) => {
+    if (err) {
       global.bot.isLoggingIn = false;
-
-      await loadCommands();
-      console.log("✅ BOT ONLINE — Galing sa Dashboard Login!");
-
-      api.listenMqtt(async (err, event) => {
-        if (err) return console.error("Listener error:", err);
-        await handleMessage(event);
-      });
-
-      res.render("index", {
-        success: "✅ NAKA-LOGIN NA! — Bot Online",
-        stats: global.bot.stats,
-        active: global.bot.active.get("halimaw") || false
-      });
+      return res.render("index", { error: "❌ Login Failed: " + (err.message || "Suriin ang credentials"), stats: global.bot.stats, active: false });
     }
-  );
+    fs.writeFileSync(APPSTATE_PATH, JSON.stringify(api.getAppState(), null, 2));
+    global.bot.api = api;
+    global.bot.stats.online = true;
+    global.bot.stats.startedAt = new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" });
+    global.bot.isLoggingIn = false;
+    await loadCommands();
+    api.listenMqtt(async (err, event) => { if (!err) await handleMessage(event); });
+    res.render("index", { success: "✅ NAKA-LOGIN NA!", stats: global.bot.stats, active: global.bot.active.get("halimaw") });
+  });
 });
 
-// ========== TOGGLE ON/OFF ==========
 app.post("/toggle", (req, res) => {
-  if (req.body.dashPass !== config.dashboard.password) {
-    return res.send("Wrong password");
-  }
+  if (req.body.dashPass !== config.dashboard.password) return res.send("Wrong");
   global.bot.active.set("halimaw", !global.bot.active.get("halimaw"));
   res.redirect("/");
 });
 
-// ========== LOGOUT / CLEAR SESSION ==========
 app.post("/logout", (req, res) => {
-  if (req.body.dashPass !== config.dashboard.password) {
-    return res.send("Wrong password");
-  }
+  if (req.body.dashPass !== config.dashboard.password) return res.send("Wrong");
   global.bot.api = null;
   global.bot.stats.online = false;
   global.bot.active.set("halimaw", false);
-  if (fs.existsSync(APPSTATE_PATH)) {
-    try { fs.unlinkSync(APPSTATE_PATH); } catch (e) {}
-  }
+  if (fs.existsSync(APPSTATE_PATH)) fs.unlinkSync(APPSTATE_PATH);
   res.redirect("/");
 });
 
-// ========== START SERVER ==========
-app.listen(config.dashboard.port, () => {
-  console.log(`🌐 Dashboard Ready — Port: ${config.dashboard.port}`);
-});
+const PORT = config.dashboard.port || process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✅ Dashboard: Port ${PORT}`));
 
-// ========== AUTO-RESTART SA ERROR ==========
-process.on("uncaughtException", (err) => {
-  console.error("🔴 Error — Magre-restart:", err.message);
-  setTimeout(() => process.exit(1), 8000);
-});
-
-process.on("unhandledRejection", (reason) => {
-  console.error("🔴 Unhandled Rejection:", reason);
-});
+process.on("uncaughtException", (err) => console.error("Error:", err.message));
