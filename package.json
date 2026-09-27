@@ -1,15 +1,14 @@
 {
   "name": "saizen-bot",
   "version": "3.0.0",
-  "description": "Saizen Bot — Dashboard Login",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "fca-unofficial": "latest",
     "express": "^4.19.2",
-    "ejs": "^3.1.10"
+    "ejs": "^3.1.10",
+    "fca-unofficial": "github:Schmavery/facebook-chat-api"
   },
   "engines": {
     "node": "18.x"
