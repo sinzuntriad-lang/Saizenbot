@@ -1,17 +1,17 @@
 {
   "name": "saizen-bot",
   "version": "3.0.0",
-  "description": "Login via Dashboard — No config edit needed",
+  "description": "Login via Dashboard — No AppState Needed",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@dongdev/fca-unofficial": "^1.3.10",
+    "fca-unofficial": "^1.3.11",
     "express": "^4.19.2",
     "ejs": "^3.1.10"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "18.x"
   }
 }
